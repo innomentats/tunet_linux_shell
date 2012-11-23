@@ -1,0 +1,107 @@
+#!/bin/bash
+
+login_url=http://net.tsinghua.edu.cn/cgi-bin/do_login
+logout_url=http://net.tsinghua.edu.cn/cgi-bin/do_logout
+
+handle_error () {
+    case $1 in
+    username_error*)
+        echo "Username error"
+        ;;
+    password_error*)
+        echo "Password error"
+        ;;
+    user_tab_error*)
+        echo "User tab error"
+        ;;
+    user_group_error*)
+        echo "User group error"
+        ;;
+    non_auth_error*)
+        echo "You don't need to login"
+        ;;
+    status_error*)
+        echo "Status error"
+        ;;
+    available_error*)
+        echo "Your account is not available"
+        ;;
+    delete_error*)
+        echo "Your account is deleted"
+        ;;
+    ip_exist_error*)
+        echo "Your ip address exists"
+        ;;
+    usernum_error*)
+        echo "User number reaches up-limit"
+        ;;
+    online_num_error*)
+        echo "Your account reaches up-limit"
+        ;;
+    mode_error*)
+        echo "Web log in is forbiden"
+        ;;
+    time_policy_error*)
+        echo "Not allowed right now"
+        ;;
+    flux_error*)
+        echo "You are out of quota"
+        ;;
+    minutes_error*)
+        echo "You are out of time"
+        ;;
+    ip_error*)
+        echo "Wrong ip address"
+        ;;
+    mac_error*)
+        echo "Wrong mac"
+        ;;
+    sync_error*)
+        echo "Your account is modified, please try again 2 minutes later"
+        ;;
+    ip_alloc*)
+        echo "This ip address is not yours"
+        ;;
+    ip_invaild*)
+        echo "Invalid ip address"
+        ;;
+    *)
+        echo $1
+        ;;
+    esac
+}
+
+case "$1" in
+    login)
+        read -p "Username:" username
+        read -sp "Password:" passwd
+        passwd_md5=`echo -n $passwd | md5sum | awk '{print $1}'`
+        echo
+        res=`curl -sd "username=$username&password=$passwd_md5&drop=0&type=1&n=100" $login_url`
+        if [ ! -z $res ] && [[ $res == *(0|1|2|3|4|5|6|7|8|9|,) ]]
+        then
+            echo "Log in succeed"
+            echo $res | awk -F, '{print "Used: " $3 " bytes"}'
+        else
+            handle_error $res
+        fi
+        ;;
+    logout)
+        curl $logout_url
+        echo
+        ;;
+    status)
+        res=`curl -sd "action=check_online" $login_url`
+        if [ ! -z $res ]
+        then
+            echo "You are logged in"
+            echo $res | awk -F, -v "OFS=\n" '{print "User: " $2, "Used: " $3 " bytes", "Time: " $5 " s"}'
+        else
+            echo "You are not logged in"
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {login|logout|status}"
+esac
+
+exit 0
